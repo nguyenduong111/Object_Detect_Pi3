@@ -94,8 +94,8 @@ def sendImgThread():
         if len(img_files) > 0:
             img_path = getMinName(img_files)
             try:
-                #img_path = getMinName(img_files)
-                #waitUnlock()
+                img_path = getMinName(img_files)
+                waitUnlock()
                 img = cv2.imread(img_path)
                 img_byte = imageCV2Byte(img)
                 #cv2.imshow('a', img)
@@ -129,45 +129,6 @@ def sendImgThread():
             
         else:
             img_files = glob.glob(os.path.join("buffer", "*.jpg"))
-
-#send_v2: truyen img ve client
-def sendImgThread_2(img, img_path):
-    k = cv2.waitKey(1)
-    if k == ord("q"):
-       Q = True
-
-    try:
-       #img_path = getMinName(img_files)
-       waitUnlock()
-       #img = cv2.imread(img_path)
-       img_byte = imageCV2Byte(img)
-       #cv2.imshow('a', img)
-       #cv2.waitKey(1)
-
-       data = {
-       'image': img_byte,
-       'name' : img_path
-       }
-       # Chuyển đổi dữ liệu thành chuỗi JSON
-       json_data = json.dumps(data)
-
-       # Gửi chuỗi JSON tới Redis
-       RD.set('pi', json_data)
-
-       resp = RD.get('client')
-       resp = json.loads(resp)
-
-       if img_path == resp['name']:   
-          #os.remove(img_path)
-          #img_files.remove(img_path)
-          #pre_name = resp['name']
-          print('[Succ] ', img_path)
-    except:
-       print(f'[Err] {img_path}')
-       #os.remove(img_path)
-       #img_files.remove(img_path)
-       #continue
-
             
 
 # Define and parse input arguments
@@ -390,67 +351,31 @@ def objectDetect():
     global LFRAME, Q, LOCK
     #a = cv2.imread(LFRAME)
     
-    #k = cv2.waitKey()
-    #if k == ord("q"):
-        #Q = True
-    
-    #getdata
-    makeFolder('buffer')
-    makeFolder('data_img')
-    tpf = 1/FPS
-    cnt = 0
-    pre_t = getTime()
     
     while not Q:
-        curr_t = getTime()
-        if curr_t - pre_t >tpf:
-            pre_t +=tpf
-        
-            r, img = vid.read()
-            fileName = str(curr_t)+'.jpg'
-            ss = time.time()
-            ee = time.time()
             
-            if not r:
-                break
+        imageDetect, isHuman = detect(LFRAME)
+        print('isHuman: ', isHuman)
             
-            cv2.imshow("a", img)
-            k = cv2.waitKey(1)
-            if k == ord("q"):
-                Q = True
-            LOCK = True
-            cv2.imwrite(os.path.join('data_img', fileName), img)
-            LOCK = False
-            cnt+=1
-            
-            imageDetect, isHuman = detect(img)
-            print('isHuman: ', isHuman)
-            
-            if(isHuman):
-                sendImgThread_2(imageDetect, fileName)
+        if(isHuman):
+            sendImgThread()
                 
-            ee = time.time()
-            print("[FPS]: ", (ee - ss))
         time.sleep(1)
         
     
     
     
-#thr3 = Thread(target=objectDetect)
-#thr3.start()
+thr3 = Thread(target=getImgThread)
+thr3.start()
 
 
 thr2 = Thread(target=sendImgThread)
-#thr2.start()
+thr2.start()
 
 thr1 = Thread(target=objectDetect)
 thr1.start()
 
-#sendImgThread()
 
 
 
-
-
-#
 
